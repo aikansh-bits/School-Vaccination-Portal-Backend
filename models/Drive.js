@@ -1,11 +1,14 @@
-import { Schema, model } from 'mongoose';
+import { Schema, model } from "mongoose";
 
-const driveSchema = new Schema({
+const driveSchema = new Schema(
+  {
     vaccineName: { type: String, required: true },
-    scheduledDate: { type: Date, required: true }, 
+    scheduledDate: { type: Date, required: true },
     dosesAvailable: { type: Number, required: true },
-    applicableClasses: [{ type: String, required: true }],
+    applicableClasses: { type: String, required: true },
     createdBy: { type: String, required: true },
-}, { timestamps: true }); 
+  },
+  { timestamps: true }
+);
 
-export default model('Drive', driveSchema);
+export default model("Drive", driveSchema);
