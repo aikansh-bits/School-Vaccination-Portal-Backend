@@ -22,7 +22,7 @@ export const getDashboardSummary = async (req, res) => {
       scheduledDate: { $gte: today },
     })
       .sort({ scheduledDate: 1 })
-      .select("vaccineName scheduledDate dosesAvailable");
+      .select("vaccineName scheduledDate dosesAvailable applicableClasses");
 
     res.status(200).json({
       status: "success",
