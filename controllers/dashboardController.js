@@ -14,10 +14,14 @@ export const getDashboardSummary = async (req, res) => {
         ? ((vaccinatedStudents / totalStudents) * 100).toFixed(2)
         : 0;
 
+    // Truncate today's time to 00:00:00 for accurate day comparison
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
     const upcomingDrives = await Drive.find({
-      scheduledDate: { $gte: new Date() },
+      scheduledDate: { $gte: today },
     })
-      .sort({ scheduledDate: 1 }) // sort by soonest first
+      .sort({ scheduledDate: 1 })
       .select("vaccineName scheduledDate dosesAvailable");
 
     res.status(200).json({
