@@ -38,10 +38,13 @@ export const createDrive = async (req, res) => {
         .status(400)
         .json({ status: "error", message: "All fields are required" });
     }
-
-    // Validate: scheduledDate must be at least 15 days from today
+    // Fix: normalize today's date before comparison
     const today = new Date();
+    today.setHours(0, 0, 0, 0); // important!
+
     const scheduleDateObj = new Date(scheduledDate);
+    scheduleDateObj.setHours(0, 0, 0, 0); // normalize too
+
     const diffDays = (scheduleDateObj - today) / (1000 * 60 * 60 * 24);
 
     if (diffDays < 2) {
@@ -53,7 +56,7 @@ export const createDrive = async (req, res) => {
 
     const newDrive = new Drive({
       vaccineName,
-      scheduledDate, // <-- the user entered future date
+      scheduledDate,
       dosesAvailable,
       applicableClasses,
       createdBy,
@@ -100,12 +103,14 @@ export const updateDrive = async (req, res) => {
 export const getUpcomingDrives = async (req, res) => {
   try {
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
     const next30Days = new Date();
     next30Days.setDate(today.getDate() + 30);
 
     const drives = await Drive.find({
-      scheduledDate: { $gte: today, $lte: next30Days },
-    });
+      scheduledDate: { $gte: today },
+    }).sort({ scheduledDate: 1 });
 
     res.status(200).json({ status: "success", data: drives });
   } catch (error) {
