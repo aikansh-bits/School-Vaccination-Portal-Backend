@@ -38,25 +38,36 @@ export const createDrive = async (req, res) => {
         .status(400)
         .json({ status: "error", message: "All fields are required" });
     }
-    // Fix: normalize today's date before comparison
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // important!
 
     const scheduleDateObj = new Date(scheduledDate);
-    scheduleDateObj.setHours(0, 0, 0, 0); // normalize too
+    scheduleDateObj.setHours(0, 0, 0, 0);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
     const diffDays = (scheduleDateObj - today) / (1000 * 60 * 60 * 24);
 
-    if (diffDays < 2) {
+    if (diffDays < 15) {
       return res.status(400).json({
         status: "error",
-        message: "Scheduled date must be at least 2 days from today",
+        message: "Scheduled date must be at least 15 days from today",
+      });
+    }
+
+    // Check for overlapping drive (same date)
+    const existingDrive = await Drive.findOne({
+      scheduledDate: scheduleDateObj,
+    });
+    if (existingDrive) {
+      return res.status(400).json({
+        status: "error",
+        message: "A drive is already scheduled on this date",
       });
     }
 
     const newDrive = new Drive({
       vaccineName,
-      scheduledDate,
+      scheduledDate: scheduleDateObj,
       dosesAvailable,
       applicableClasses,
       createdBy,
@@ -84,15 +95,49 @@ export const updateDrive = async (req, res) => {
         .json({ status: "error", message: "Drive not found" });
     }
 
-    if (new Date(drive.scheduledDate) < new Date()) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const scheduledDate = new Date(drive.scheduledDate);
+    scheduledDate.setHours(0, 0, 0, 0);
+
+    if (scheduledDate < today) {
       return res
         .status(400)
         .json({ status: "error", message: "Cannot edit a past drive." });
     }
 
+    // If scheduledDate is being changed, validate new date
+    if (updates.scheduledDate) {
+      const newDate = new Date(updates.scheduledDate);
+      newDate.setHours(0, 0, 0, 0);
+      const diffDays = (newDate - today) / (1000 * 60 * 60 * 24);
+
+      if (diffDays < 15) {
+        return res.status(400).json({
+          status: "error",
+          message: "New scheduled date must be at least 15 days from today",
+        });
+      }
+
+      const conflict = await Drive.findOne({
+        scheduledDate: newDate,
+        _id: { $ne: driveId },
+      });
+      if (conflict) {
+        return res.status(400).json({
+          status: "error",
+          message: "Another drive is already scheduled on this date",
+        });
+      }
+
+      updates.scheduledDate = newDate;
+    }
+
     const updatedDrive = await Drive.findByIdAndUpdate(driveId, updates, {
       new: true,
     });
+
     res.status(200).json({ status: "success", data: updatedDrive });
   } catch (error) {
     res.status(500).json({ status: "error", message: error.message });
