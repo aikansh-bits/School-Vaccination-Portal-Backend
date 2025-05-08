@@ -1,12 +1,49 @@
 import Student from "../models/Student.js";
 
 // Get all students
+// Get all students with filters
 export async function getAllStudents(req, res) {
   try {
-    const students = await Student.find();
-    res.json({
+    const {
+      name,
+      class: studentClass,
+      studentId,
+      vaccinationStatus,
+    } = req.query;
+
+    const filter = {};
+
+    if (name) {
+      filter.name = { $regex: name, $options: "i" };
+    }
+
+    if (studentClass) {
+      filter.class = studentClass;
+    }
+
+    if (studentId) {
+      filter.studentId = studentId;
+    }
+
+    if (vaccinationStatus === "vaccinated") {
+      filter["vaccinations.0"] = { $exists: true };
+    } else if (vaccinationStatus === "not_vaccinated") {
+      filter["vaccinations"] = { $eq: [] };
+    }
+
+    const students = await Student.find(filter);
+
+    const formatted = students.map((student) => ({
+      ...student.toObject(),
+      vaccinationStatus:
+        student.vaccinations && student.vaccinations.length > 0
+          ? "vaccinated"
+          : "not_vaccinated",
+    }));
+
+    res.status(200).json({
       status: "success",
-      data: students,
+      data: formatted,
     });
   } catch (error) {
     res.status(500).json({ status: "error", message: error.message });
