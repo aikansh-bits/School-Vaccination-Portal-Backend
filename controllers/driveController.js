@@ -37,13 +37,6 @@ export const getAllDrives = async (req, res) => {
   }
 };
 
-// Helper function
-function normalize(date) {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
 // Create Drive
 export const createDrive = async (req, res) => {
   try {
