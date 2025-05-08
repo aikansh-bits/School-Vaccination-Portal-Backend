@@ -16,7 +16,14 @@ export async function getAllStudents(req, res) {
 // Create a new student
 export const createStudent = async (req, res) => {
   try {
-    const { name, class: studentClass, dob, mobileNumber, address } = req.body;
+    const {
+      name,
+      class: studentClass,
+      dob,
+      mobileNumber,
+      address,
+      vaccinations,
+    } = req.body;
 
     if (!name || !studentClass || !dob) {
       return res.status(400).json({
@@ -36,6 +43,11 @@ export const createStudent = async (req, res) => {
       newStudentId = `STU${nextIdNumber.toString().padStart(3, "0")}`;
     }
 
+    // Convert ["Corona Vaccine"] to [{ vaccineName: "Corona Vaccine" }]
+    const vaccinationObjects = Array.isArray(vaccinations)
+      ? vaccinations.map((vaccineName) => ({ vaccineName }))
+      : [];
+
     const student = new Student({
       studentId: newStudentId,
       name,
@@ -43,7 +55,7 @@ export const createStudent = async (req, res) => {
       dob,
       mobileNumber,
       address,
-      vaccinations: [],
+      vaccinations: vaccinationObjects,
     });
 
     const saved = await student.save();
@@ -58,29 +70,43 @@ export const createStudent = async (req, res) => {
 export const updateStudent = async (req, res) => {
   try {
     const { studentId } = req.params;
-    const { name, class: studentClass, dob, mobileNumber, address } = req.body;
+    const {
+      name,
+      class: studentClass,
+      dob,
+      mobileNumber,
+      address,
+      vaccinations,
+    } = req.body;
 
-    const updates = {};
+    const student = await Student.findOne({ studentId });
 
-    if (name) updates.name = name;
-    if (studentClass) updates.class = studentClass;
-    if (dob) updates.dob = dob;
-    if (mobileNumber) updates.mobileNumber = mobileNumber;
-    if (address) updates.address = address;
-
-    const updatedStudent = await Student.findOneAndUpdate(
-      { studentId },
-      updates,
-      { new: true }
-    );
-
-    if (!updatedStudent) {
+    if (!student) {
       return res
         .status(404)
         .json({ status: "error", message: "Student not found" });
     }
 
-    res.status(200).json({ status: "success", data: updatedStudent });
+    // Update basic fields
+    if (name) student.name = name;
+    if (studentClass) student.class = studentClass;
+    if (dob) student.dob = dob;
+    if (mobileNumber) student.mobileNumber = mobileNumber;
+    if (address) student.address = address;
+
+    // Append new vaccinations if provided and not duplicates
+    if (Array.isArray(vaccinations)) {
+      const existing = student.vaccinations.map((v) => v.vaccineName);
+      vaccinations.forEach((vaccineName) => {
+        if (vaccineName && !existing.includes(vaccineName)) {
+          student.vaccinations.push({ vaccineName });
+        }
+      });
+    }
+
+    await student.save();
+
+    res.status(200).json({ status: "success", data: student });
   } catch (error) {
     res.status(500).json({ status: "error", message: error.message });
   }
