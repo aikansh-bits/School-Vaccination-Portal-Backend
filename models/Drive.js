@@ -7,6 +7,11 @@ const driveSchema = new Schema(
     dosesAvailable: { type: Number, required: true },
     applicableClasses: { type: String, required: true },
     createdBy: { type: String, required: true },
+    status: {
+      type: String,
+      enum: ["upcoming", "today", "completed", "cancelled"],
+      default: "upcoming",
+    },
   },
   { timestamps: true }
 );
