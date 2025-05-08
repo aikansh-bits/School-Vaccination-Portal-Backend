@@ -3,7 +3,6 @@ import {
   createDrive,
   getAllDrives,
   updateDrive,
-  getUpcomingDrives,
 } from "../controllers/driveController.js";
 
 const router = Router();
