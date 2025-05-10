@@ -12,23 +12,25 @@ export const getAllDrives = async (req, res) => {
   try {
     // Sort drives by scheduledDate in ascending order (nearest first)
     const drives = await Drive.find().sort({ scheduledDate: 1 });
-    const today = normalize(new Date());
 
+    // Format the drives without recalculating isExpired
     const formatted = drives.map((d) => {
       const obj = d.toObject();
-      const sched = normalize(obj.scheduledDate);
 
-      // Only override status if still set to upcoming
+      // If status is upcoming, adjust status to today or completed based on date
       if (obj.status === "upcoming") {
-        if (sched.getTime() === today.getTime()) obj.status = "today";
-        else if (sched < today) obj.status = "completed";
-        else obj.status = "upcoming";
+        const today = normalize(new Date());
+        const sched = normalize(obj.scheduledDate);
+
+        if (sched.getTime() === today.getTime()) {
+          obj.status = "today";
+        } else if (sched < today) {
+          obj.status = "completed";
+        }
       }
 
-      return {
-        ...obj,
-        isExpired: sched < today,
-      };
+      // Return the drive without recalculating isExpired
+      return obj;
     });
 
     res.status(200).json({ status: "success", data: formatted });
