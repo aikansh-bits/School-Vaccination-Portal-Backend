@@ -62,7 +62,7 @@ export const createDrive = async (req, res) => {
         .json({ status: "error", message: "All fields are required." });
     }
 
-    const scheduleDate = normalize(scheduledDate);
+    const scheduleDate = normalize(scheduledDate); // Date is already in UTC
     const today = normalize(new Date());
     const diffDays = (scheduleDate - today) / 86_400_000;
 
@@ -83,20 +83,14 @@ export const createDrive = async (req, res) => {
       });
     }
 
-    // Initial status
-    let status = "upcoming";
-    if (scheduleDate.getTime() === today.getTime()) {
-      status = "today";
-    }
-
-    // Save drive
+    // Save drive with UTC time
     const drive = new Drive({
       vaccineName,
-      scheduledDate: scheduleDate,
+      scheduledDate: scheduleDate, // Store as UTC
       dosesAvailable,
       applicableClasses,
       createdBy,
-      status,
+      status: "upcoming", // Default status
       isExpired: false, // Default is false
     });
 
@@ -129,7 +123,7 @@ export const updateDrive = async (req, res) => {
     const originalDate = new Date(drive.scheduledDate);
     originalDate.setHours(0, 0, 0, 0);
 
-    // ❌ Prevent updates to past drives
+    // Prevent updates to past drives
     if (originalDate < today) {
       return res.status(400).json({
         status: "error",
@@ -137,7 +131,7 @@ export const updateDrive = async (req, res) => {
       });
     }
 
-    // ✅ Allow only valid manual status updates
+    // Handle manual status updates
     if (updates.status) {
       const allowedManualStatuses = ["completed", "cancelled"];
       if (!allowedManualStatuses.includes(updates.status)) {
@@ -152,7 +146,7 @@ export const updateDrive = async (req, res) => {
       }
     }
 
-    // ✅ Handle scheduledDate update
+    // Handle scheduledDate update
     if (updates.scheduledDate) {
       const newDate = new Date(updates.scheduledDate);
       newDate.setHours(0, 0, 0, 0);
@@ -165,7 +159,7 @@ export const updateDrive = async (req, res) => {
         });
       }
 
-      // ✅ Check for conflicts
+      // Check for conflicts
       const conflict = await Drive.findOne({
         scheduledDate: newDate,
         _id: { $ne: driveId },
@@ -178,10 +172,10 @@ export const updateDrive = async (req, res) => {
         });
       }
 
-      updates.scheduledDate = newDate;
+      updates.scheduledDate = newDate; // Store as UTC
     }
 
-    // ✅ Update and return the new drive
+    // Update and return the new drive
     const updatedDrive = await Drive.findByIdAndUpdate(driveId, updates, {
       new: true,
     });
