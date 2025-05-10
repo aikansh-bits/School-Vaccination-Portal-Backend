@@ -18,8 +18,10 @@ export const getDashboardSummary = async (req, res) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
+    // Find upcoming drives where isExpired is false
     const upcomingDrives = await Drive.find({
       scheduledDate: { $gte: today },
+      isExpired: false, // Filter to only include drives that are not expired
     })
       .sort({ scheduledDate: 1 })
       .select("vaccineName scheduledDate dosesAvailable applicableClasses");
