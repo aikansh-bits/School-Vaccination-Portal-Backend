@@ -18,9 +18,13 @@ export const getDashboardSummary = async (req, res) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Find upcoming drives where isExpired is false
+    // Calculate the date 30 days from today
+    const thirtyDaysFromToday = new Date(today);
+    thirtyDaysFromToday.setDate(today.getDate() + 30);
+
+    // Find upcoming drives where isExpired is false and within the next 30 days
     const upcomingDrives = await Drive.find({
-      scheduledDate: { $gte: today },
+      scheduledDate: { $gte: today, $lte: thirtyDaysFromToday },
       isExpired: false, // Filter to only include drives that are not expired
     })
       .sort({ scheduledDate: 1 })
@@ -39,3 +43,4 @@ export const getDashboardSummary = async (req, res) => {
     res.status(500).json({ status: "error", message: error.message });
   }
 };
+ƒ
