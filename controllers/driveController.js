@@ -42,15 +42,16 @@ export const createDrive = async (req, res) => {
   try {
     const {
       vaccineName,
-      scheduledDate: rawDate,
+      scheduledDate,
       dosesAvailable,
       applicableClasses,
       createdBy,
     } = req.body;
 
+    // Validate presence of required fields
     if (
       !vaccineName ||
-      !rawDate ||
+      !scheduledDate ||
       !dosesAvailable ||
       !applicableClasses ||
       !createdBy
@@ -60,10 +61,11 @@ export const createDrive = async (req, res) => {
         .json({ status: "error", message: "All fields are required." });
     }
 
-    const scheduleDate = normalize(rawDate);
+    const scheduleDate = normalize(scheduledDate);
     const today = normalize(new Date());
-    const diffDays = (scheduleDate - today) / 86_400_000; // ms per day
+    const diffDays = (scheduleDate - today) / 86_400_000;
 
+    // Must be at least 15 days from today
     if (diffDays < 15) {
       return res.status(400).json({
         status: "error",
@@ -71,17 +73,20 @@ export const createDrive = async (req, res) => {
       });
     }
 
-    if (await Drive.findOne({ scheduledDate })) {
+    // Prevent duplicate drives on same date
+    const existing = await Drive.findOne({ scheduledDate: scheduleDate });
+    if (existing) {
       return res.status(400).json({
         status: "error",
         message: "A drive is already scheduled on this date.",
       });
     }
 
-    // Determine initial status
-    let status =
+    // Initial status
+    const status =
       scheduleDate.getTime() === today.getTime() ? "today" : "upcoming";
 
+    // Save drive
     const drive = new Drive({
       vaccineName,
       scheduledDate: scheduleDate,
@@ -92,9 +97,10 @@ export const createDrive = async (req, res) => {
     });
 
     const saved = await drive.save();
-    res.status(201).json({ status: "success", data: saved });
+
+    return res.status(201).json({ status: "success", data: saved });
   } catch (err) {
-    res.status(500).json({ status: "error", message: err.message });
+    return res.status(500).json({ status: "error", message: err.message });
   }
 };
 
@@ -112,13 +118,14 @@ export const updateDrive = async (req, res) => {
       });
     }
 
+    // Normalize today and original date to midnight
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     const originalDate = new Date(drive.scheduledDate);
     originalDate.setHours(0, 0, 0, 0);
 
-    // Prevent editing past drives
+    // ❌ Prevent updates to past drives
     if (originalDate < today) {
       return res.status(400).json({
         status: "error",
@@ -126,7 +133,7 @@ export const updateDrive = async (req, res) => {
       });
     }
 
-    // ✅ Restrict manual status update to 'completed' or 'cancelled' only
+    // ✅ Allow only valid manual status updates
     if (updates.status) {
       const allowedManualStatuses = ["completed", "cancelled"];
       if (!allowedManualStatuses.includes(updates.status)) {
@@ -137,7 +144,7 @@ export const updateDrive = async (req, res) => {
       }
     }
 
-    // Handle scheduledDate change
+    // ✅ Handle scheduledDate update
     if (updates.scheduledDate) {
       const newDate = new Date(updates.scheduledDate);
       newDate.setHours(0, 0, 0, 0);
@@ -150,7 +157,7 @@ export const updateDrive = async (req, res) => {
         });
       }
 
-      // Check for overlap
+      // ✅ Check for conflicts
       const conflict = await Drive.findOne({
         scheduledDate: newDate,
         _id: { $ne: driveId },
@@ -166,12 +173,13 @@ export const updateDrive = async (req, res) => {
       updates.scheduledDate = newDate;
     }
 
+    // ✅ Update and return the new drive
     const updatedDrive = await Drive.findByIdAndUpdate(driveId, updates, {
       new: true,
     });
 
-    res.status(200).json({ status: "success", data: updatedDrive });
+    return res.status(200).json({ status: "success", data: updatedDrive });
   } catch (error) {
-    res.status(500).json({ status: "error", message: error.message });
+    return res.status(500).json({ status: "error", message: error.message });
   }
 };
