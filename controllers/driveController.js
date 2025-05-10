@@ -1,4 +1,3 @@
-// controllers/driveController.js
 import Drive from "../models/Drive.js";
 
 // Helper to normalize a date to midnight
@@ -132,22 +131,13 @@ export const updateDrive = async (req, res) => {
       });
     }
 
-    // Handle scheduledDate update without normalization
+    // Handle scheduledDate update without normalizing the time
     if (updates.scheduledDate) {
-      const newDate = new Date(updates.scheduledDate); // Use exact date received
-      newDate.setHours(0, 0, 0, 0); // Optional: only set time to midnight if needed
+      const newScheduledDate = new Date(updates.scheduledDate); // Use the exact date and time received
 
-      const diffDays = (newDate - today) / (1000 * 60 * 60 * 24);
-      if (diffDays < 15) {
-        return res.status(400).json({
-          status: "error",
-          message: "New scheduled date must be at least 15 days from today.",
-        });
-      }
-
-      // Check for conflicts
+      // Check for conflicts with other drives
       const conflict = await Drive.findOne({
-        scheduledDate: newDate,
+        scheduledDate: newScheduledDate,
         _id: { $ne: driveId },
       });
 
@@ -158,13 +148,27 @@ export const updateDrive = async (req, res) => {
         });
       }
 
-      updates.scheduledDate = newDate; // Store as exact received value
+      updates.scheduledDate = newScheduledDate; // Save the received exact value (time is preserved)
     }
 
-    // Update and return the new drive
+    // If status is completed or cancelled, set isExpired to true
+    if (
+      updates.status &&
+      (updates.status === "completed" || updates.status === "cancelled")
+    ) {
+      updates.isExpired = true; // Mark the drive as expired
+    }
+
+    // Update the drive with the provided updates
     const updatedDrive = await Drive.findByIdAndUpdate(driveId, updates, {
       new: true,
     });
+
+    // Ensure the response reflects the updated isExpired status
+    updatedDrive.isExpired =
+      updates.isExpired !== undefined
+        ? updates.isExpired
+        : updatedDrive.isExpired;
 
     return res.status(200).json({ status: "success", data: updatedDrive });
   } catch (error) {
