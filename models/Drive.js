@@ -12,6 +12,7 @@ const driveSchema = new Schema(
       enum: ["upcoming", "today", "completed", "cancelled"],
       default: "upcoming",
     },
+    isExpired: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

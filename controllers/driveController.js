@@ -37,7 +37,6 @@ export const getAllDrives = async (req, res) => {
     res.status(500).json({ status: "error", message: err.message });
   }
 };
-ƒ
 
 // Create Drive
 export const createDrive = async (req, res) => {
@@ -85,8 +84,10 @@ export const createDrive = async (req, res) => {
     }
 
     // Initial status
-    const status =
-      scheduleDate.getTime() === today.getTime() ? "today" : "upcoming";
+    let status = "upcoming";
+    if (scheduleDate.getTime() === today.getTime()) {
+      status = "today";
+    }
 
     // Save drive
     const drive = new Drive({
@@ -96,6 +97,7 @@ export const createDrive = async (req, res) => {
       applicableClasses,
       createdBy,
       status,
+      isExpired: false, // Default is false
     });
 
     const saved = await drive.save();
@@ -143,6 +145,10 @@ export const updateDrive = async (req, res) => {
           status: "error",
           message: "Status can only be set to 'completed' or 'cancelled'.",
         });
+      }
+      // If the status is completed or cancelled, set isExpired to true
+      if (["completed", "cancelled"].includes(updates.status)) {
+        updates.isExpired = true;
       }
     }
 
