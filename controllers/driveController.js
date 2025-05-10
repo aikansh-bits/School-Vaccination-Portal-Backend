@@ -62,8 +62,10 @@ export const createDrive = async (req, res) => {
         .json({ status: "error", message: "All fields are required." });
     }
 
-    const scheduleDate = normalize(scheduledDate); // Date is already in UTC
-    const today = normalize(new Date());
+    // Use the scheduledDate exactly as it is received (without normalization)
+    const scheduleDate = new Date(scheduledDate); // Directly use the provided UTC date
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
     const diffDays = (scheduleDate - today) / 86_400_000;
 
     // Must be at least 15 days from today
@@ -83,10 +85,10 @@ export const createDrive = async (req, res) => {
       });
     }
 
-    // Save drive with UTC time
+    // Save drive with exact provided UTC time
     const drive = new Drive({
       vaccineName,
-      scheduledDate: scheduleDate, // Store as UTC
+      scheduledDate: scheduleDate, // Store exactly as received
       dosesAvailable,
       applicableClasses,
       createdBy,
@@ -116,14 +118,13 @@ export const updateDrive = async (req, res) => {
       });
     }
 
-    // Normalize today and original date to midnight
+    // Prevent updates to past drives
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     const originalDate = new Date(drive.scheduledDate);
     originalDate.setHours(0, 0, 0, 0);
 
-    // Prevent updates to past drives
     if (originalDate < today) {
       return res.status(400).json({
         status: "error",
@@ -131,25 +132,10 @@ export const updateDrive = async (req, res) => {
       });
     }
 
-    // Handle manual status updates
-    if (updates.status) {
-      const allowedManualStatuses = ["completed", "cancelled"];
-      if (!allowedManualStatuses.includes(updates.status)) {
-        return res.status(400).json({
-          status: "error",
-          message: "Status can only be set to 'completed' or 'cancelled'.",
-        });
-      }
-      // If the status is completed or cancelled, set isExpired to true
-      if (["completed", "cancelled"].includes(updates.status)) {
-        updates.isExpired = true;
-      }
-    }
-
-    // Handle scheduledDate update
+    // Handle scheduledDate update without normalization
     if (updates.scheduledDate) {
-      const newDate = new Date(updates.scheduledDate);
-      newDate.setHours(0, 0, 0, 0);
+      const newDate = new Date(updates.scheduledDate); // Use exact date received
+      newDate.setHours(0, 0, 0, 0); // Optional: only set time to midnight if needed
 
       const diffDays = (newDate - today) / (1000 * 60 * 60 * 24);
       if (diffDays < 15) {
@@ -172,7 +158,7 @@ export const updateDrive = async (req, res) => {
         });
       }
 
-      updates.scheduledDate = newDate; // Store as UTC
+      updates.scheduledDate = newDate; // Store as exact received value
     }
 
     // Update and return the new drive
