@@ -1,44 +1,37 @@
 import Student from "../models/Student.js";
 
 // Get all students
-// Get all students
 export async function getAllStudents(req, res) {
   try {
     const {
       name,
-      class: studentClass,
       studentId,
+      class: studentClass,
       vaccinationStatus,
     } = req.query;
 
     const filter = {};
 
-    // Filter by name (case insensitive partial match)
     if (name) {
-      filter.name = { $regex: name, $options: "i" }; // Case insensitive search for name
+      filter.name = { $regex: name, $options: "i" };
     }
 
-    // Filter by class
     if (studentClass) {
-      filter.class = studentClass; // Match exact class name
+      filter.class = studentClass;
     }
 
-    // Filter by student ID
     if (studentId) {
-      filter.studentId = studentId; // Match exact student ID
+      filter.studentId = studentId;
     }
 
-    // Filter by vaccination status
     if (vaccinationStatus === "vaccinated") {
-      filter["vaccinations.0"] = { $exists: true }; // Check if at least one vaccination exists
+      filter["vaccinations.0"] = { $exists: true };
     } else if (vaccinationStatus === "not_vaccinated") {
-      filter["vaccinations"] = { $size: 0 }; // No vaccinations
+      filter["vaccinations"] = { $eq: [] };
     }
 
-    // Fetch students based on the filter
     const students = await Student.find(filter);
 
-    // Format the student data
     const formatted = students.map((student) => ({
       ...student.toObject(),
       vaccinationStatus:
@@ -47,7 +40,6 @@ export async function getAllStudents(req, res) {
           : "not_vaccinated",
     }));
 
-    // Send the response with the filtered and formatted student data
     res.status(200).json({
       status: "success",
       data: formatted,
