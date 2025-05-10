@@ -11,8 +11,8 @@ function normalize(date) {
 // GET Drives
 export const getAllDrives = async (req, res) => {
   try {
-    // Sort drives by scheduledDate in descending order (latest first)
-    const drives = await Drive.find().sort({ scheduledDate: -1 });
+    // Sort drives by scheduledDate in ascending order (nearest first)
+    const drives = await Drive.find().sort({ scheduledDate: 1 });
     const today = normalize(new Date());
 
     const formatted = drives.map((d) => {
