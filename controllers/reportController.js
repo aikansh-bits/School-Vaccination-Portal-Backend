@@ -1,4 +1,4 @@
-import Student from "../models/studentModel.js";
+import Student from "../models/Student.js";
 
 export const generateVaccinationReport = async (req, res) => {
   try {
