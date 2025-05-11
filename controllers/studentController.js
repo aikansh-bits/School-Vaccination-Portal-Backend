@@ -182,7 +182,14 @@ export const markStudentVaccinated = async (req, res) => {
 };
 
 export const uploadStudents = async (req, res) => {
-  const filePath = req.file.path;
+  const filePath = req.file?.path;
+
+  if (!filePath) {
+    return res.status(400).json({
+      status: "error",
+      message: "No file uploaded.",
+    });
+  }
 
   const results = [];
 
@@ -223,11 +230,15 @@ export const uploadStudents = async (req, res) => {
         }
 
         fs.unlinkSync(filePath); // clean up
-        res
-          .status(200)
-          .json({ status: "success", insertedCount: inserted.length });
+        res.status(200).json({
+          status: "success",
+          insertedCount: inserted.length,
+        });
       } catch (err) {
-        res.status(500).json({ status: "error", message: err.message });
+        res.status(500).json({
+          status: "error",
+          message: err.message,
+        });
       }
     });
 };
