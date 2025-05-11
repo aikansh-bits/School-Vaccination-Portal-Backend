@@ -1,4 +1,6 @@
 import Student from "../models/Student.js";
+import fs from "fs";
+import csv from "csv-parser";
 
 // Get all students
 export async function getAllStudents(req, res) {
@@ -177,4 +179,55 @@ export const markStudentVaccinated = async (req, res) => {
   } catch (error) {
     res.status(500).json({ status: "error", message: error.message });
   }
+};
+
+export const uploadStudents = async (req, res) => {
+  const filePath = req.file.path;
+
+  const results = [];
+
+  fs.createReadStream(filePath)
+    .pipe(csv())
+    .on("data", (data) => results.push(data))
+    .on("end", async () => {
+      try {
+        const inserted = [];
+
+        for (const row of results) {
+          const { name, class: studentClass, dob, mobileNumber, address } = row;
+
+          if (!name || !studentClass || !dob) continue;
+
+          const lastStudent = await Student.findOne().sort({ createdAt: -1 });
+          let newStudentId = "STU001";
+
+          if (lastStudent) {
+            const lastIdNumber =
+              parseInt(lastStudent.studentId.replace("STU", "")) || 0;
+            const nextIdNumber = lastIdNumber + 1;
+            newStudentId = `STU${nextIdNumber.toString().padStart(3, "0")}`;
+          }
+
+          const student = new Student({
+            studentId: newStudentId,
+            name,
+            class: studentClass,
+            dob,
+            mobileNumber,
+            address,
+            vaccinations: [],
+          });
+
+          await student.save();
+          inserted.push(student);
+        }
+
+        fs.unlinkSync(filePath); // clean up
+        res
+          .status(200)
+          .json({ status: "success", insertedCount: inserted.length });
+      } catch (err) {
+        res.status(500).json({ status: "error", message: err.message });
+      }
+    });
 };
