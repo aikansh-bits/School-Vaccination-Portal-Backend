@@ -3,7 +3,6 @@ import { generateVaccinationReport } from "../controllers/reportController.js";
 
 const router = Router();
 
-
-router.get("/vaccinationReport", generateVaccinationReport);
+router.get("/generateReport", generateVaccinationReport);
 
 export default router;
