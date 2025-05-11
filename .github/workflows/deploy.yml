@@ -3,7 +3,7 @@ name: Deploy to EC2
 on:
   push:
     branches:
-      - main # or your deployment branch
+      - main
 
 jobs:
   deploy:
@@ -13,12 +13,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Setup SSH key
+      - name: Decode SSH key
         run: |
-          echo "$EC2_KEY" > key.pem
+          echo "$EC2_KEY" | base64 -d > key.pem
           chmod 600 key.pem
 
-      - name: Deploy to EC2
+      - name: SSH and deploy
         run: |
           ssh -i key.pem -o StrictHostKeyChecking=no $EC2_USERNAME@$EC2_HOST << 'EOF'
             cd $EC2_PATH
