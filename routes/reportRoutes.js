@@ -1,9 +1,9 @@
-import { Router } from 'express';
-import { generateReport, getAllReports } from '../controllers/reportController.js';
+import { Router } from "express";
+import { generateVaccinationReport } from "../controllers/reportController.js";
 
 const router = Router();
 
-router.post('/generateReport', generateReport);
-router.get('/getAllReports', getAllReports);
+
+router.get("/vaccinationReport", generateVaccinationReport);
 
 export default router;
